@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'Man2.dart';
+import 'package:confirm_dialog/confirm_dialog.dart';
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -9,9 +11,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'AppIOT',
-        theme: ThemeData(
-          scaffoldBackgroundColor: const Color(0xFFECECEC), // Màu nền mặc định
-        ),
+      theme: ThemeData(
+        scaffoldBackgroundColor: const Color(0xFFECECEC), // Màu nền mặc định
+      ),
       home: const Man1(),
     );
   }
@@ -43,15 +45,17 @@ class _Man1State extends State<Man1> {
           crossAxisSpacing: 16, //khoảng cách các cột
           mainAxisSpacing: 16, //khoảng cách giữa các hàng
           children: [
-            buildGridItem('ĐÈN', Icons.lightbulb_outline,context),
-            buildGridItem('QUẠT', FontAwesomeIcons.fan,context),
-            buildGridItem('ĐIỀU HÒA', Icons.ac_unit_outlined,context),
-            buildGridItem('TV', Icons.tv,context),
+            buildGridItem('ĐÈN', Icons.lightbulb_outline, context),
+            buildGridItem('QUẠT', FontAwesomeIcons.fan, context),
+            buildGridItem('ĐIỀU HÒA', Icons.ac_unit_outlined, context),
+            buildGridItem('TV', Icons.tv, context),
+            buildGridItem('CẢM BIẾN', Icons.sensors, context),
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
+          //Thêm thiết bị
           print('Thêm thiết bị mới');
         },
         backgroundColor: const Color(0xFF33CCFF),
@@ -82,21 +86,23 @@ Widget buildGridItem(String title, IconData icon, BuildContext context) {
           Expanded(
             flex: 2, // Định nghĩa tỷ lệ không gian cho cột này
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 37),
+              padding: const EdgeInsets.symmetric(vertical: 30),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween, // Căn giữa theo trục dọc
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                // Căn giữa theo trục dọc
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(10),
                     child: Icon(
                       icon,
-                      size: 80,
+                      size: 70,
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
                   Text(
                     title,
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -110,15 +116,41 @@ Widget buildGridItem(String title, IconData icon, BuildContext context) {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.edit, size:35, color: Color(0xFFBBBBBB)),
-                    onPressed: () {
-                      //Xử lý sửa
+                    icon: const Icon(Icons.edit, size: 35, color: Colors.black),
+
+                    //Ấn edit name
+                    onPressed: () async {
+                      if (await confirm(
+                        context,
+                        title: const Text('Device Name'),
+                        content: const TextField(
+                          decoration:
+                              InputDecoration(hintText: 'Enter device name'),
+                        ),
+                        textOK: const Text('Yes',style: TextStyle(color: Colors.black),),
+                        textCancel: const Text('No',style: TextStyle(color: Colors.black),),
+                      )) {
+                        return print('pressedOK');
+                      }
+                      return print('pressedCancel');
                     },
                   ),
                   IconButton(
-                    icon: const Icon(Icons.delete_outline, size:35, color: Colors.black),
-                    onPressed: () {
-                      //Xử lý xóa
+                    icon: const Icon(Icons.delete_outline,
+                        size: 35, color: Colors.black),
+
+                    //Ấn delete
+                    onPressed: () async {
+                      if (await confirm(
+                        context,
+                        title: const Text('Confirm'),
+                        content: const Text('Would you like to remove?'),
+                        textOK: const Text('Yes',style: TextStyle(color: Colors.black),),
+                        textCancel: const Text('No',style: TextStyle(color: Colors.black),),
+                      )) {
+                        return print('pressedOK');
+                      }
+                      return print('pressedCancel');
                     },
                   ),
                 ],
