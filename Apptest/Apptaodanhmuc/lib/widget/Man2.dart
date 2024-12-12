@@ -4,6 +4,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:animated_toggle_switch/animated_toggle_switch.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:confirm_dialog/confirm_dialog.dart';
+import 'ServiceMQTT.dart';
 
 class Man2 extends StatelessWidget {
   const Man2({super.key, required this.category});
@@ -55,17 +56,82 @@ class _Screen2State extends State<Screen2> {
     });
   }
 
+  final mqttService = MqttService();
+
   @override
   void initState() {
     super.initState();
     devices = _getDevicesForCategory(widget.category);
-
+    mqttService.connect();
     //Số lượng thiết bị và trạng thái ban đầu
     toggleStates = List<bool>.filled(devices.length, false);
     // Mặc định là chế độ "OFF" cho tất cả
     selectedModes = List<int>.filled(devices.length, 0);
     selectedItems = List<String?>.filled(devices.length, 'SELECT'); // Trạng thái SELECT DROP
     temperature = List<int>.filled(devices.length, 18);
+  }
+
+  @override
+  void dispose() {
+    mqttService.disconnect();
+    super.dispose();
+  }
+
+  String convertToTopic(String input) {
+    if (input.contains("Đèn")) {
+      final id = RegExp(r'Đèn\s*(\d+)').firstMatch(input)?.group(1);
+      return 'LED$id';
+    }
+    else if (input.contains("Quạt")) {
+      final id = RegExp(r'Quạt\s*(\d+)').firstMatch(input)?.group(1);
+      return 'Fan$id';
+    }
+    // else if (input.contains("ĐIỀU HOÀ")) {
+    //   final id = RegExp(r'ĐIỀU HOÀ\s*(\d+)').firstMatch(input)?.group(1);
+    //   return 'LED$id';
+    // }
+    // else if (input.contains("TV")) {
+    //   final id = RegExp(r'Đèn\s*(\d+)').firstMatch(input)?.group(1);
+    //   return 'LED$id';
+    // }
+    // else if (input.contains("CẢM BIẾN")) {
+    //   final id = RegExp(r'Đèn\s*(\d+)').firstMatch(input)?.group(1);
+    //   return 'LED$id';
+    // }
+
+    throw ArgumentError('Chuỗi không hợp lệ: $input');
+  }
+
+  void handleDeviceToggle(String deviceName, bool value) {
+    String topic = '/AIRC/${convertToTopic(deviceName)}/';
+    String message = value ? "ON" : "OFF";
+    mqttService.publish(topic, message);
+    print('Đã gửi thông điệp: $message đến topic: $topic');
+  }
+
+  void handleDeviceToggleFan(String deviceName, int value) {
+      String topic = '/AIRC/${convertToTopic(deviceName)}/';
+
+      if (value == 0) {
+        String message = "00";
+        mqttService.publish(topic, message);
+        print('Đã gửi thông điệp: $message đến topic: $topic');
+      }
+      else if (value == 1) {
+        String message = "25";
+        mqttService.publish(topic, message);
+        print('Đã gửi thông điệp: $message đến topic: $topic');
+      }
+      else if (value == 2) {
+        String message = "50";
+        mqttService.publish(topic, message);
+        print('Đã gửi thông điệp: $message đến topic: $topic');
+      }
+      else if (value == 3) {
+        String message = "99";
+        mqttService.publish(topic, message);
+        print('Đã gửi thông điệp: $message đến topic: $topic');
+      }
   }
 
   @override
@@ -159,6 +225,7 @@ class _Screen2State extends State<Screen2> {
                                       //hàm setState() được gọi để cập nhật giá trị selectedMode thành index của nút đó
                                       setState(() {
                                         selectedModes[index] = modeIndex;
+                                        handleDeviceToggleFan(devices[index], modeIndex);
                                       });
                                     },
                                     child: Container(
@@ -376,6 +443,7 @@ class _Screen2State extends State<Screen2> {
                                   });
                                   print(
                                       'Thiết bị ${devices[index]}: ${value ? "BẬT" : "TẮT"}');
+                                  handleDeviceToggle(devices[index], value);
                                 },
                                 iconBuilder: (value) => value
                                     ? const Icon(Icons.power,
