@@ -37,20 +37,21 @@ class _Screen2State extends State<Screen2> {
   late List<String> devices; // Danh sách thiết bị
   late List<int> selectedModes; // Danh sách chế độ của từng quạt
   final List<String> items = ['SELECT', 'Chế độ 1', 'Chế độ 2', 'Chế độ 3'];
-  List<String?> selectedItems=[];//để lưu trạng thái lựa chọn riêng cho từng điều hòa.
+  List<String?> selectedItems = []; //để lưu trạng thái lựa chọn riêng cho từng điều hòa.
   late List<int> temperature; // Nhiệt độ riêng cho từng điều hòa
   //tăng nhiệt độ tối đa 30
   void _incrementCounter(int index) {
     setState(() {
-      if(temperature[index]<30){
+      if (temperature[index] < 30) {
         temperature[index]++;
       }
     });
   }
+
   //giảm nhiệt độ tối đa 16
   void _decrementCounter(int index) {
     setState(() {
-      if(temperature[index]>18){
+      if (temperature[index] > 18) {
         temperature[index]--;
       }
     });
@@ -78,12 +79,11 @@ class _Screen2State extends State<Screen2> {
   }
 
   String convertToTopic(String input) {
-    if (input.contains("Đèn")) {
-      final id = RegExp(r'Đèn\s*(\d+)').firstMatch(input)?.group(1);
+    if (input.contains("LED")) {
+      final id = RegExp(r'LED\s*(\d+)').firstMatch(input)?.group(1);
       return 'LED$id';
-    }
-    else if (input.contains("Quạt")) {
-      final id = RegExp(r'Quạt\s*(\d+)').firstMatch(input)?.group(1);
+    } else if (input.contains("FAN")) {
+      final id = RegExp(r'FAN\s*(\d+)').firstMatch(input)?.group(1);
       return 'Fan$id';
     }
     // else if (input.contains("ĐIỀU HOÀ")) {
@@ -104,34 +104,64 @@ class _Screen2State extends State<Screen2> {
 
   void handleDeviceToggle(String deviceName, bool value) {
     String topic = '/AIRC/${convertToTopic(deviceName)}/';
-    String message = value ? "ON" : "OFF";
+    //String topic = '/AIRC/AIRC78:EE:4C:01:F9:98/';
+    String message = value ? "on" : "off";
     mqttService.publish(topic, message);
     print('Đã gửi thông điệp: $message đến topic: $topic');
+
+    mqttService.subscribe(topic, (onMessage){
+      print('Đã nhận tin nhắn: $onMessage');
+      // Cập nhật trạng thái giao diện theo tin nhắn nhận được
+      setState(() {
+          int index = devices.indexOf(deviceName); // Xác định thiết bị theo tên
+          if (onMessage == 'on') {
+            toggleStates[index] = true;
+      } else if (onMessage == 'off') {
+        toggleStates[index] = false;
+      }
+      });
+    });
   }
 
   void handleDeviceToggleFan(String deviceName, int value) {
-      String topic = '/AIRC/${convertToTopic(deviceName)}/';
+    String topic = '/AIRC/${convertToTopic(deviceName)}/';
 
-      if (value == 0) {
-        String message = "00";
-        mqttService.publish(topic, message);
-        print('Đã gửi thông điệp: $message đến topic: $topic');
+    if (value == 0) {
+      String message = "00";
+      mqttService.publish(topic, message);
+      print('Đã gửi thông điệp: $message đến topic: $topic');
+    } else if (value == 1) {
+      String message = "25";
+      mqttService.publish(topic, message);
+      print('Đã gửi thông điệp: $message đến topic: $topic');
+    } else if (value == 2) {
+      String message = "50";
+      mqttService.publish(topic, message);
+      print('Đã gửi thông điệp: $message đến topic: $topic');
+    } else if (value == 3) {
+      String message = "99";
+      mqttService.publish(topic, message);
+      print('Đã gửi thông điệp: $message đến topic: $topic');
+    }
+
+    mqttService.subscribe(topic, (onMessage){
+      print('Đã nhận tin nhắn: $onMessage');
+      // Cập nhật trạng thái giao diện theo tin nhắn nhận được
+      setState(() {
+          int index = devices.indexOf(deviceName); // Xác định thiết bị theo tên
+          if (onMessage == '00') {
+            selectedModes[index] = 0;
+      } else if (onMessage == '25') {
+        selectedModes[index] = 1;
       }
-      else if (value == 1) {
-        String message = "25";
-        mqttService.publish(topic, message);
-        print('Đã gửi thông điệp: $message đến topic: $topic');
+      else if (onMessage == '50') {
+        selectedModes[index] = 2;
       }
-      else if (value == 2) {
-        String message = "50";
-        mqttService.publish(topic, message);
-        print('Đã gửi thông điệp: $message đến topic: $topic');
+      else if (onMessage == '99') {
+        selectedModes[index] = 3;
       }
-      else if (value == 3) {
-        String message = "99";
-        mqttService.publish(topic, message);
-        print('Đã gửi thông điệp: $message đến topic: $topic');
-      }
+      });
+    });
   }
 
   @override
@@ -141,7 +171,7 @@ class _Screen2State extends State<Screen2> {
         backgroundColor: const Color(0xFF33CCFF),
         title: Center(
           child: Text(
-            'THIẾT BỊ ${widget.category}',
+            widget.category,
             style: const TextStyle(fontSize: 30, color: Colors.white),
           ),
         ),
@@ -171,30 +201,33 @@ class _Screen2State extends State<Screen2> {
                   children: [
                     Expanded(
                       flex: 2,
+                      //Cách giữa các hình
                       child: Padding(
-                        padding: widget.category == 'ĐIỀU HÒA'
-                        ? const EdgeInsets.symmetric(vertical: 12)
-                        : const EdgeInsets.symmetric(vertical: 20),
+                        padding: widget.category == 'AIR'
+                            ? const EdgeInsets.symmetric(vertical: 12)
+                            : widget.category == 'FAN'
+                                ? const EdgeInsets.symmetric(vertical: 10)
+                                : const EdgeInsets.symmetric(vertical: 30),
                         child: Column(
-
-                          mainAxisAlignment: widget.category == 'ĐIỀU HÒA'||widget.category == 'QUẠT'
-                          ? MainAxisAlignment.center
-                          : MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment: widget.category == 'AIR'
+                              ? MainAxisAlignment.center
+                              : MainAxisAlignment.spaceBetween,
                           children: [
                             ClipRRect(
                               borderRadius: BorderRadius.circular(10),
                               child: Icon(
-                                widget.category == 'ĐÈN'
+                                widget.category == 'LED'
                                     ? Icons.lightbulb_outline
                                     : widget.category == 'TV'
                                         ? Icons.tv
-                                        : widget.category == 'ĐIỀU HÒA'
+                                        : widget.category == 'AIR'
                                             ? Icons.ac_unit_outlined
-                                            : widget.category == 'QUẠT'
-                                                ? FontAwesomeIcons.fan
-                                                : Icons.sensors,
-                                size: widget.category == 'ĐIỀU HÒA'
-                                ? 48 : 60,
+                                            : FontAwesomeIcons.fan,
+                                size: widget.category == 'AIR' 
+                                ? 48 
+                                : widget.category == 'FAN'
+                                ? 60
+                                : 70,
                               ),
                             ),
                             Text(
@@ -204,76 +237,76 @@ class _Screen2State extends State<Screen2> {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
+                            if (widget.category == 'FAN') ...[
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: 15,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: List.generate(4, (modeIndex) {
+                                    bool isSelected =
+                                        selectedModes[index] == modeIndex;
+                                    // Label for each mode
+                                    String label = modeIndex == 0 ? "OFF" : "$modeIndex";// == if else
 
-                            if (widget.category == 'QUẠT') ...[
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: List.generate(4, (modeIndex) {
-                                  bool isSelected =
-                                      selectedModes[index] == modeIndex;
-                                  // Label for each mode
-                                  String label;
-                                  if (modeIndex == 0) {
-                                    //Nếu index == 0, nội dung nút là "OFF"
-                                    label = "OFF";
-                                  } else {
-                                    //Không, nội dung là số (1, 2, hoặc 3)
-                                    label = "$modeIndex";
-                                  }
-                                  return GestureDetector(
-                                    onTap: () {
-                                      //hàm setState() được gọi để cập nhật giá trị selectedMode thành index của nút đó
-                                      setState(() {
-                                        selectedModes[index] = modeIndex;
-                                        handleDeviceToggleFan(devices[index], modeIndex);
-                                      });
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 2.5, horizontal: 6),
-                                      decoration: BoxDecoration(
-                                        color: isSelected
-                                            ? (modeIndex == 0
-                                            ? Colors.red
-                                            : Colors.green)
-                                            : Colors.white,
-                                        border: Border.all(color: Colors.black),
-
-                                        //Bo góc
-                                        borderRadius: BorderRadius.only(
-                                          //Mode OFF (trái bo 15px, phải không bo)
-                                          topLeft: modeIndex == 0
-                                              ? const Radius.circular(7.5)
-                                              : Radius.zero,
-                                          // Bo góc trái trên
-                                          bottomLeft: modeIndex == 0
-                                              ? const Radius.circular(7.5)
-                                              : Radius.zero,
-                                          // Bo góc trái dưới
-                                          //Mode 3 (trái bo 15px, phải không bo)
-                                          topRight: modeIndex == 3
-                                              ? const Radius.circular(7.5)
-                                              : Radius.zero,
-                                          // Bo góc phải trên
-                                          bottomRight: modeIndex == 3
-                                              ? const Radius.circular(7.5)
-                                              : Radius.zero, // Bo góc phải dưới
+                                    // Padding khác nhau cho chế độ OFF và các chế độ còn lại
+                                    double horizontalPadding = modeIndex == 0 ? 2 : 7;
+                                    return GestureDetector(
+                                      onTap: () {
+                                        //hàm setState() được gọi để cập nhật giá trị selectedMode thành index của nút đó
+                                        setState(() {
+                                          selectedModes[index] = modeIndex;
+                                          handleDeviceToggleFan(devices[index], modeIndex);
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(
+                                            vertical: 5, horizontal: horizontalPadding),
+                                        decoration: BoxDecoration(
+                                          color: isSelected
+                                              ? (modeIndex == 0
+                                              ? Colors.red
+                                              : Colors.green)
+                                              : Colors.white,
+                                          border: Border.all(color: Colors.black),
+                                      
+                                          //Bo góc
+                                          borderRadius: BorderRadius.only(
+                                            //Mode OFF (trái bo 15px, phải không bo)
+                                            topLeft: modeIndex == 0
+                                                ? const Radius.circular(7.5)
+                                                : Radius.zero,
+                                            // Bo góc trái trên
+                                            bottomLeft: modeIndex == 0
+                                                ? const Radius.circular(7.5)
+                                                : Radius.zero,
+                                            // Bo góc trái dưới
+                                            //Mode 3 (trái bo 15px, phải không bo)
+                                            topRight: modeIndex == 3
+                                                ? const Radius.circular(7.5)
+                                                : Radius.zero,
+                                            // Bo góc phải trên
+                                            bottomRight: modeIndex == 3
+                                                ? const Radius.circular(7.5)
+                                                : Radius.zero, // Bo góc phải dưới
+                                          ),
+                                        ),
+                                        child: Text(
+                                          label,
+                                          style: const TextStyle(
+                                            color: Colors.black,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
                                       ),
-                                      child: Text(
-                                        label,
-                                        style: const TextStyle(
-                                          color: Colors.black,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                }),
+                                    );
+                                  }),
+                                ),
                               ),
                             ]
-                              //select drop
-                            else if (widget.category == 'ĐIỀU HÒA') ...[
+                            //select drop
+                            else if (widget.category == 'AIR') ...[
                               // Container làm Select Drop
                               GestureDetector(
                                 onTap: () {
@@ -285,15 +318,17 @@ class _Screen2State extends State<Screen2> {
                                         height: 200, // Đặt chiều cao cố định
                                         child: ListView.builder(
                                           itemCount: items.length,
-                                          itemBuilder: (BuildContext context, int itemIndex) {
+                                          itemBuilder: (BuildContext context,
+                                              int itemIndex) {
                                             return ListTile(
                                               title: Text(items[itemIndex]),
                                               onTap: () {
                                                 setState(() {
                                                   // Cập nhật đúng điều hòa
-                                                  selectedItems[index] = items[itemIndex];;
+                                                  selectedItems[index] =items[itemIndex];
                                                 });
-                                                Navigator.pop(context); // Đóng BottomSheet
+                                                Navigator.pop(
+                                                    context); // Đóng BottomSheet
                                               },
                                             );
                                           },
@@ -310,14 +345,16 @@ class _Screen2State extends State<Screen2> {
                                   ),
                                   child: Container(
                                     //text trong container
-                                    padding:  const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 2),
                                     decoration: BoxDecoration(
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(15),
-                                      border: Border.all(color: Colors.black.withOpacity(0.5)),
+                                      border: Border.all(color: Colors.black),
                                     ),
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         Text(
                                           selectedItems[index] ?? 'SELECT',
@@ -338,7 +375,8 @@ class _Screen2State extends State<Screen2> {
                               ),
 
                               Container(
-                                padding: const EdgeInsets.symmetric(vertical: 2),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 2),
                                 constraints: const BoxConstraints(
                                   maxWidth: 113,
                                   maxHeight: 30, // Giới hạn chiều cao
@@ -348,7 +386,8 @@ class _Screen2State extends State<Screen2> {
                                   borderRadius: BorderRadius.circular(15),
                                 ),
                                 child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   //mainAxisSize: MainAxisSize.min,
                                   children: [
                                     IconButton(
@@ -383,19 +422,20 @@ class _Screen2State extends State<Screen2> {
                         ),
                       ),
                     ),
-
                     Expanded(
                       flex: 1,
                       child: Padding(
-                        padding: widget.category == 'QUẠT'
-                        ? const EdgeInsets.symmetric(vertical: 5, horizontal: 5)
-                        : const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
+                        padding: widget.category == 'FAN'
+                            ? const EdgeInsets.symmetric(
+                                vertical: 5, horizontal: 5)
+                            : const EdgeInsets.symmetric(
+                                vertical: 20, horizontal: 10),
                         child: Column(
-                          mainAxisAlignment:widget.category == 'QUẠT'
-                          ? MainAxisAlignment.start
-                          : MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment: widget.category == 'FAN'
+                              ? MainAxisAlignment.start
+                              : MainAxisAlignment.spaceBetween,
                           children: [
-                            if (widget.category != 'QUẠT') ...[
+                            if (widget.category != 'FAN') ...[
                               AnimatedToggleSwitch.dual(
                                 current: toggleStates[index],
                                 first: false,
@@ -420,9 +460,9 @@ class _Screen2State extends State<Screen2> {
                                       ],
                                       stops: [
                                         global.position -
-                                            (1 - 2 * max(0, global.position - 0.5)) * 0.7,
+                                            (1 -2 *max(0, global.position - 0.5)) * 0.7,
                                         global.position +
-                                            max(0, 2 * (global.position - 0.5)) * 0.7,
+                                            max(0, 2 *(global.position - 0.5)) * 0.7,
                                       ],
                                     ),
                                   );
@@ -453,7 +493,7 @@ class _Screen2State extends State<Screen2> {
                               ),
                             ],
 
-                            if (widget.category == 'QUẠT') ...[
+                            if (widget.category == 'FAN') ...[
                               const SizedBox.shrink(),
                             ], // Không hiển thị gì cả
 
@@ -483,8 +523,9 @@ class _Screen2State extends State<Screen2> {
                               },
                             ),
 
-                            if (widget.category == 'QUẠT')...[
-                            const SizedBox(height: 35)],
+                            if (widget.category == 'FAN') ...[
+                              const SizedBox(height: 35)
+                            ],
 
                             IconButton(
                               icon: const Icon(Icons.delete_outline,
@@ -532,16 +573,14 @@ class _Screen2State extends State<Screen2> {
 
   List<String> _getDevicesForCategory(String category) {
     switch (category) {
-      case 'ĐÈN':
-        return ['Đèn 1', 'Đèn 2', 'Đèn 3'];
+      case 'LED':
+        return ['LED 1', 'LED 2', 'LED 3'];
       case 'TV':
         return ['TV 1', 'TV 2', 'TV 3'];
-      case 'ĐIỀU HÒA':
-        return ['Điều hòa 1', 'Điều hòa 2', 'Điều hòa 3'];
-      case 'QUẠT':
-        return ['Quạt 1', 'Quạt 2', 'Quạt 3'];
-      case 'CẢM BIẾN':
-        return ['Cảm Biến 1', 'Cảm Biến 2', 'Cảm Biến 3'];
+      case 'AIR':
+        return ['AIR 1', 'AIR 2', 'AIR 3'];
+      case 'FAN':
+        return ['FAN 1', 'FAN 2', 'FAN 3'];
       default:
         return [];
     }
