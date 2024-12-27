@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -39,7 +41,7 @@ class BleController extends GetxController{
     }
   }
 
-// This function will help user to connect to BLE devices.
+//This function will help user to connect to BLE devices.
  Future<void> connectToDevice(BluetoothDevice device)async {
     await device.connect(timeout: const Duration(seconds: 15));
 

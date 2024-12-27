@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../Man 2/Man2.dart';
 import 'Man3/bluetoothscreen.dart';
 
@@ -30,8 +32,8 @@ class Man1 extends StatefulWidget {
 class _Man1State extends State<Man1> {
   // Danh sách các thiết bị mặc định (các thiết bị không thể xóa)
   final List<String> defaultDevices = ['LED', 'FAN', 'AIR', 'TV', 'SENSORS'];
-
   Map<String, String> modifiedDefaultDevices = {}; // Lưu các tên mặc định đã được sửa
+  List<String> removedDefaultDevices = []; // Lưu các thiết bị mặc định đã bị xóa
   // Map ánh xạ tên thiết bị với icon của nó
   final Map<String, IconData> deviceIcons = {
     'LED': Icons.lightbulb_outline,
@@ -41,6 +43,45 @@ class _Man1State extends State<Man1> {
     'SENSORS': Icons.sensors,
   };
   List<Map<String, dynamic>> devices = [];//Danh sách thiết bị mới
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRemovedDefaultDevices();
+    _loadDevices();         // Tải danh sách thiết bị động
+  }
+
+  Future<void> _saveRemovedDefaultDevices() async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setStringList('removedDefaultDevices', removedDefaultDevices);
+  }
+
+  Future<void> _loadRemovedDefaultDevices() async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String>? savedList = prefs.getStringList('removedDefaultDevices');
+    if (savedList != null) {
+      setState(() {
+        removedDefaultDevices = savedList;
+      });
+    }
+  }
+
+  // Lưu danh sách thiết bị động vào SharedPreferences
+  Future<void> _saveDevices() async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setString('dynamicDevices', jsonEncode(devices));
+  }
+
+// Tải danh sách thiết bị động từ SharedPreferences
+  Future<void> _loadDevices() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? jsonString = prefs.getString('dynamicDevices');
+    if (jsonString != null) {
+      setState(() {
+        devices = List<Map<String, dynamic>>.from(jsonDecode(jsonString));
+      });
+    }
+  }
 
   Future<void> _editDeviceName(BuildContext context, String currentName) async {
     print("Editing device: $currentName");  // Kiểm tra xem hàm có được gọi không
@@ -75,11 +116,13 @@ class _Man1State extends State<Man1> {
     if (newName != null && newName.isNotEmpty) {
       setState(() {
         if (defaultDevices.contains(currentName)) {
-          modifiedDefaultDevices[currentName] = newName;  // Lưu tên sửa đổi cho thiết bị mặc định
+          modifiedDefaultDevices[currentName] = newName; // Lưu tên sửa đổi
         } else {
           devices.firstWhere((device) => device['title'] == currentName)['title'] = newName;
         }
       });
+      await _saveDevices();          // Lưu danh sách thiết bị động
+      //await _saveModifiedDevices(); // Lưu tên thiết bị mặc định đã chỉnh sửa
     }
     print('New Name: $newName');
   }
@@ -110,15 +153,15 @@ class _Man1State extends State<Man1> {
     if (confirmDelete == true) {
       setState(() {
         if (defaultDevices.contains(device['title'])) {
-          // Nếu là thiết bị mặc định, xóa khỏi danh sách mặc định
-          defaultDevices.remove(device['title']);
+          removedDefaultDevices.add(device['title']);
+          _saveRemovedDefaultDevices();
         } else {
-          // Nếu là thiết bị động, xóa khỏi danh sách devices
           devices.remove(device);
+          _saveDevices();
         }
       });
+      print('Delete: $device');
     }
-    print('Delete: $device');
   }
 
   @override
@@ -141,7 +184,7 @@ class _Man1State extends State<Man1> {
           mainAxisSpacing: 16, //khoảng cách giữa các hàng
           children: [
             //Các thiết bị mặc định
-            ...defaultDevices.map((device) {
+            ...defaultDevices.where((device) => !removedDefaultDevices.contains(device)).map((device) {
               final displayName = modifiedDefaultDevices[device] ?? device; // Sử dụng tên sửa đổi nếu có
               return GridItemWidget(
                 title: displayName,
@@ -184,6 +227,7 @@ class _Man1State extends State<Man1> {
             setState(() {
               devices.add({'title': selectedDevice});
             });
+            await _saveDevices();
           }
         },
         backgroundColor: const Color(0xFF33CCFF),
