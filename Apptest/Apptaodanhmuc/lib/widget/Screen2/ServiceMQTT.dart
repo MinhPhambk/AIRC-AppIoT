@@ -40,13 +40,14 @@ class MqttService {
     if (client.connectionStatus?.state == MqttConnectionState.connected) {
       final builder = MqttClientPayloadBuilder();
       builder.addString(message);
-      client.publishMessage(topic, MqttQos.atLeastOnce, builder.payload!);
+      client.publishMessage(topic, MqttQos.atLeastOnce, builder.payload!,retain: true);
       print('Đã gửi thông điệp: $message đến topic: $topic');
     } else {
       print('MQTT client chưa kết nối');
     }
   }
-   //phần subscribe
+
+  //phần subscribe
  void subscribe(String topic, Function(String message) onMessage) {
     if (client.connectionStatus!.state == MqttConnectionState.connected) {
       // Đăng ký topic nếu chưa có

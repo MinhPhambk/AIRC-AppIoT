@@ -1,10 +1,12 @@
+// ignore: file_names
 import 'dart:math';
+import 'package:apptaodanhmuc/widget/Screen2/database_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:animated_toggle_switch/animated_toggle_switch.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:confirm_dialog/confirm_dialog.dart';
-import 'ServiceMQTT.dart';
+import 'widget/Screen2/ServiceMQTT.dart';
 
 class Man2 extends StatelessWidget {
   const Man2({super.key, required this.category});
@@ -33,12 +35,13 @@ class Screen2 extends StatefulWidget {
 }
 
 class _Screen2State extends State<Screen2> {
-  late List<bool> toggleStates; // Trạng thái của từng thiết bị
-  late List<String> devices; // Danh sách thiết bị
-  late List<int> selectedModes; // Danh sách chế độ của từng quạt
+  List<bool> toggleStates=[]; // Trạng thái của từng thiết bị
+  List<String> devices = []; // Danh sách thiết bị
+  List<int> selectedModes=[]; // Danh sách chế độ của từng quạt
   final List<String> items = ['SELECT', 'Chế độ 1', 'Chế độ 2', 'Chế độ 3'];
   List<String?> selectedItems = []; //để lưu trạng thái lựa chọn riêng cho từng điều hòa.
-  late List<int> temperature; // Nhiệt độ riêng cho từng điều hòa
+  List<int> temperature=[]; // Nhiệt độ riêng cho từng điều hòa
+  late final DatabaseHelper _databaseHelper;
   //tăng nhiệt độ tối đa 30
   void _incrementCounter(int index) {
     setState(() {
@@ -62,20 +65,51 @@ class _Screen2State extends State<Screen2> {
   @override
   void initState() {
     super.initState();
-    devices = _getDevicesForCategory(widget.category);
     mqttService.connect();
-    //Số lượng thiết bị và trạng thái ban đầu
-    toggleStates = List<bool>.filled(devices.length, false);
-    // Mặc định là chế độ "OFF" cho tất cả
-    selectedModes = List<int>.filled(devices.length, 0);
-    selectedItems = List<String?>.filled(devices.length, 'SELECT'); // Trạng thái SELECT DROP
-    temperature = List<int>.filled(devices.length, 18);
+    _databaseHelper = DatabaseHelper(); // Khởi tạo DatabaseHelper
+    _initializeDevices();
+     
   }
 
   @override
   void dispose() {
     mqttService.disconnect();
     super.dispose();
+  }
+
+  void _initializeDevices() async {
+    // Lấy danh sách thiết bị từ SQLite khi bắt đầu
+    devices = await _databaseHelper.getDevicesForCategory(widget.category);
+    setState(() {
+      _updateStateLists();
+    });
+  }
+  void _updateStateLists() {
+    final length = devices.length;
+    toggleStates = List<bool>.filled(length, false, growable: true);
+    selectedModes = List<int>.filled(length, 0, growable: true);
+    selectedItems = List<String?>.filled(length, 'SELECT', growable: true);
+    temperature = List<int>.filled(length, 18, growable: true);
+  }
+   void _addDevice(String category, String deviceName) async {
+    if (devices.contains(deviceName)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$deviceName đã tồn tại!')),
+      );
+      return;
+    }
+
+    // Thêm thiết bị vào SQLite
+    await _databaseHelper.insertDevice(category, deviceName);
+    // Cập nhật danh sách thiết bị
+    _initializeDevices();
+  }
+
+  void _deleteDevice(String category, String deviceName) async {
+    // Xóa thiết bị khỏi SQLite
+    await _databaseHelper.deleteDevice(deviceName);
+    // Cập nhật danh sách thiết bị
+    _initializeDevices();
   }
 
   String convertToTopic(String input) {
@@ -86,25 +120,12 @@ class _Screen2State extends State<Screen2> {
       final id = RegExp(r'FAN\s*(\d+)').firstMatch(input)?.group(1);
       return 'Fan$id';
     }
-    // else if (input.contains("ĐIỀU HOÀ")) {
-    //   final id = RegExp(r'ĐIỀU HOÀ\s*(\d+)').firstMatch(input)?.group(1);
-    //   return 'LED$id';
-    // }
-    // else if (input.contains("TV")) {
-    //   final id = RegExp(r'Đèn\s*(\d+)').firstMatch(input)?.group(1);
-    //   return 'LED$id';
-    // }
-    // else if (input.contains("CẢM BIẾN")) {
-    //   final id = RegExp(r'Đèn\s*(\d+)').firstMatch(input)?.group(1);
-    //   return 'LED$id';
-    // }
-
+  
     throw ArgumentError('Chuỗi không hợp lệ: $input');
   }
 
   void handleDeviceToggle(String deviceName, bool value) {
     String topic = '/AIRC/${convertToTopic(deviceName)}/';
-    //String topic = '/AIRC/AIRC78:EE:4C:01:F9:98/';
     String message = value ? "on" : "off";
     mqttService.publish(topic, message);
     print('Đã gửi thông điệp: $message đến topic: $topic');
@@ -113,12 +134,12 @@ class _Screen2State extends State<Screen2> {
       print('Đã nhận tin nhắn: $onMessage');
       // Cập nhật trạng thái giao diện theo tin nhắn nhận được
       setState(() {
-          int index = devices.indexOf(deviceName); // Xác định thiết bị theo tên
-          if (onMessage == 'on') {
-            toggleStates[index] = true;
-      } else if (onMessage == 'off') {
-        toggleStates[index] = false;
-      }
+        int index = devices.indexOf(deviceName); // Xác định thiết bị theo tên
+        if (onMessage == 'on') {
+          toggleStates[index] = true;
+        } else if (onMessage == 'off') {
+          toggleStates[index] = false;
+        }
       });
     });
   }
@@ -176,7 +197,8 @@ class _Screen2State extends State<Screen2> {
           ),
         ),
       ),
-      body: Padding(
+      body: 
+      Padding(
         padding: const EdgeInsets.all(16),
         child: GridView.builder(
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -528,28 +550,11 @@ class _Screen2State extends State<Screen2> {
                             ],
 
                             IconButton(
-                              icon: const Icon(Icons.delete_outline,
-                                  size: 35, color: Colors.black),
-                              onPressed: () async {
-                                if (await confirm(
-                                  context,
-                                  title: const Text('Confirm'),
-                                  content:
-                                      const Text('Would you like to remove?'),
-                                  textOK: const Text(
-                                    'Yes',
-                                    style: TextStyle(color: Colors.black),
-                                  ),
-                                  textCancel: const Text(
-                                    'No',
-                                    style: TextStyle(color: Colors.black),
-                                  ),
-                                )) {
-                                  return print('pressedOK');
-                                }
-                                return print('pressedCancel');
-                              },
-                            ),
+                            icon: const Icon(Icons.delete_outline, size: 35, color: Colors.black),
+                          onPressed: () {
+                          _deleteDevice(widget.category, devices[index]); // Xóa thiết bị khi nhấn nút Xóa
+                            },
+                          ),
                           ],
                         ),
                       ),
@@ -562,27 +567,61 @@ class _Screen2State extends State<Screen2> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          print('Thêm thiết bị mới');
+        onPressed: () async {
+          String? deviceName; // Khai báo biến deviceName bên ngoài
+          deviceName = await showDialog<String>(
+            context: context,
+            builder: (context) {
+              String tempDeviceName = ""; // Biến tạm để lưu giá trị nhập
+              return AlertDialog(
+                title: const Text('Add Device'),
+                content: TextField(
+                  decoration: const InputDecoration(hintText: 'Enter device name'),
+                  onChanged: (value) {
+                    tempDeviceName = value;
+                  },
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, tempDeviceName),
+                    child: const Text('Add'),
+                  ),
+                ],
+              );
+            },
+          );
+          // Kiểm tra nếu `deviceName` không null và không rỗng
+          if (deviceName != null && deviceName.isNotEmpty) {
+            _addDevice(widget.category, deviceName);
+          } else {
+            // Hiển thị thông báo nếu tên thiết bị không hợp lệ
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Device name cannot be empty')),
+            );
+          }
         },
-        backgroundColor: const Color(0xFF33CCFF),
-        child: const Icon(Icons.add, color: Colors.white, size: 30),
+        child: const Icon(Icons.add),
       ),
     );
   }
+  
 
-  List<String> _getDevicesForCategory(String category) {
-    switch (category) {
-      case 'LED':
-        return ['LED 1', 'LED 2', 'LED 3'];
-      case 'TV':
-        return ['TV 1', 'TV 2', 'TV 3'];
-      case 'AIR':
-        return ['AIR 1', 'AIR 2', 'AIR 3'];
-      case 'FAN':
-        return ['FAN 1', 'FAN 2', 'FAN 3'];
-      default:
-        return [];
-    }
-  }
+//   List<String> _getDevicesForCategory(String category) {
+//     switch (category) {
+//       case 'LED':
+//         return ['LED 1', 'LED 2', 'LED 3'];
+//       case 'TV':
+//         return ['TV 1', 'TV 2', 'TV 3'];
+//       case 'AIR':
+//         return ['AIR 1', 'AIR 2', 'AIR 3'];
+//       case 'FAN':
+//         return ['FAN 1', 'FAN 2', 'FAN 3'];
+//       default:
+//         return [];
+//     }
+//   }
 }
