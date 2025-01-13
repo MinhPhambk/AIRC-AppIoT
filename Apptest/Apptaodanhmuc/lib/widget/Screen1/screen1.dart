@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'package:apptaodanhmuc/Component/item.dart';
 import 'package:apptaodanhmuc/widget/Screen2/screen2.dart';
+import 'package:apptaodanhmuc/widget/Screen3/line_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../Controller/Bluetooth/bluescreen_scan.dart';
+import '../../Controller/Bluetooth/blue_screen_scan.dart';
 
 class Screen1 extends StatefulWidget {
   const Screen1({super.key});
@@ -16,9 +17,10 @@ class Screen1 extends StatefulWidget {
 class _Screen1State extends State<Screen1> {
   List<Map<String, dynamic>> devices = [];
   final List<Map<String, String>> testDevices = [
-    {'title': 'LED'},
-    {'title': 'FAN'},
-    {'title': 'AIR'},
+    {'title': 'LED', 'type': 'device'},
+    {'title': 'FAN', 'type': 'device'},
+    {'title': 'AIR', 'type': 'device'},
+    {'title': 'SENSOR', 'type': 'sensor'},
   ];
   String? selectedDevice = "Choose Device"; // Lưu trữ thiết bị đã chọn
 
@@ -42,7 +44,7 @@ class _Screen1State extends State<Screen1> {
               DropdownButton<String>(
                 hint: const Text('Chọn thiết bị'),
                 value: selectedDevice, // Hiển thị giá trị đã chọn
-                items: <String>['Choose Device', 'LED', 'FAN',"AIR"]
+                items: <String>['Choose Device', 'LED', 'FAN', 'AIR', 'SENSOR']
                     .map((String value) => DropdownMenuItem<String>(
                   value: value,
                   child: Text(value),
@@ -54,11 +56,12 @@ class _Screen1State extends State<Screen1> {
                   });
                 },
               ),
-              TextField(
-                controller: quantityController,
-                decoration: const InputDecoration(labelText: 'Số lượng'),
-                keyboardType: TextInputType.number,
-              ),
+              if (selectedDevice != 'SENSOR')
+                TextField(
+                  controller: quantityController,
+                  decoration: const InputDecoration(labelText: 'Số lượng'),
+                  keyboardType: TextInputType.number,
+                ),
             ],
           ),
           actions: <Widget>[
@@ -66,31 +69,44 @@ class _Screen1State extends State<Screen1> {
               onPressed: () {
                 Navigator.of(ctx).pop(); // Đóng popup khi hủy
               },
-              child: const Text('Hủy'),
+              child: const Text('Close'),
             ),
             TextButton(
               onPressed: () {
-                final quantity = quantityController.text;
-
-                if (selectedDevice != null && quantity.isNotEmpty) {
-                  Navigator.of(ctx).pop(); // Đóng popup trước khi chuyển màn hình
+                if (selectedDevice == 'SENSOR') {
+                  // Nếu chọn SENSOR, chuyển sang màn hình SensorDetailsScreen
+                  Navigator.of(ctx).pop(); // Đóng popup
 
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => DeviceScreen(
-                        device: selectedDevice!,
-                        quantity: int.parse(quantity),
-                      ),
+                      builder: (context) => LineChart(deviceName: selectedDevice!),
                     ),
                   );
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Vui lòng chọn thiết bị và nhập số lượng')),
-                  );
+                  // Nếu chọn thiết bị khác, kiểm tra số lượng và chuyển sang màn hình tương ứng
+                  final quantity = quantityController.text;
+
+                  if (quantity.isNotEmpty) {
+                    Navigator.of(ctx).pop(); // Đóng popup trước khi chuyển màn hình
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DeviceScreen(
+                          device: selectedDevice!,
+                          quantity: int.parse(quantity),
+                        ),
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Vui lòng nhập số lượng')),
+                    );
+                  }
                 }
               },
-              child: const Text('Xác nhận'),
+              child: const Text('OK'),
             ),
           ],
         );

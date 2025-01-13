@@ -34,7 +34,7 @@ class BleController extends GetxController{
             print("Device found: ${result.device.platformName}, RSSI: ${result.rssi}");
           }
         });
-
+        //
         await Future.delayed(const Duration(seconds: 30));
         FlutterBluePlus.stopScan();
       }
@@ -161,156 +161,61 @@ class BleController extends GetxController{
 
   // Future<String?> receiveDataFromDevice(BluetoothDevice device) async {
   //   try {
-  //     // Khám phá dịch vụ và đặc tính
-  //     List<BluetoothService> services = await device.discoverServices();
-  //     BluetoothCharacteristic? notifyCharacteristic;
+  //     // Kết nối với thiết bị
+  //     await device.connect();
   //
+  //     // Lấy danh sách dịch vụ
+  //     List<BluetoothService> services = await device.discoverServices();
+  //     BluetoothCharacteristic? targetCharacteristic;
+  //
+  //     // Tìm kiếm characteristic hỗ trợ ddojc
   //     for (var service in services) {
   //       for (var characteristic in service.characteristics) {
-  //         if (characteristic.properties.notify) {
-  //           notifyCharacteristic = characteristic;
+  //         if (characteristic.properties.read) {
+  //           targetCharacteristic = characteristic;
   //           break;
   //         }
   //       }
-  //       if (notifyCharacteristic != null) break;
+  //       if (targetCharacteristic != null) break;
   //     }
+  //     // List<List<int>> completeData = [];
+  //     if (targetCharacteristic != null) {
+  //       // Gửi chuỗi JSON qua Bluetooth
+  //       List<int> value = await targetCharacteristic.read();
   //
-  //     if (notifyCharacteristic != null) {
-  //       await notifyCharacteristic.setNotifyValue(true);
-  //       print("Đã bật thông báo từ characteristic.");
+  //       await targetCharacteristic.setNotifyValue(true);
+  //       targetCharacteristic.lastValueStream.listen((value) {
+  //         // completeData.add(value);
+  //         print("innnnnn ----------> $value");
+  //         String jsonString = String.fromCharCodes(value);
   //
-  //       // Lắng nghe dữ liệu
-  //       await for (var data in notifyCharacteristic.lastValueStream) {
-  //         if (data.isNotEmpty) {
-  //           // In dữ liệu thô (List<int>)
-  //           print("Dữ liệu thô nhận được: $data");
+  //         print('Decoded String: $jsonString');
   //
-  //           try {
-  //             // Nếu dữ liệu không phải chuỗi UTF-8 hợp lệ, thử chuyển nó thành chuỗi hex
-  //             String hexString = data.map((e) => e.toRadixString(16).padLeft(2, '0')).join(' ');
-  //             print("Dữ liệu dưới dạng hex: $hexString");
+  //       });
+  //       // print("completeData: $completeData");
   //
-  //             // Chuyển đổi từ chuỗi hex sang chuỗi UTF-8 (nếu có thể)
-  //             String receivedString = utf8.decode(data, allowMalformed: true);
-  //             print("Dữ liệu chuỗi nhận được: $receivedString");
+  //       // print("----------> $value");
+  //       // await targetCharacteristic.write(bytes, withoutResponse: false);
   //
-  //             // Thử phân tích JSON nếu là chuỗi JSON hợp lệ
-  //             try {
-  //               Map<String, dynamic> jsonMap = jsonDecode(receivedString);
-  //               print("JSON được phân tích: $jsonMap");
-  //             } catch (jsonError) {
-  //               print("Dữ liệu không phải JSON hợp lệ: $jsonError");
-  //             }
-  //           } catch (e) {
-  //             print("Lỗi khi phân tích dữ liệu: $e");
-  //           }
-  //
-  //           break; // Ngừng lắng nghe sau khi nhận 1 gói dữ liệu
-  //         }
-  //       }
-  //
-  //       // Thời gian chờ 10 giây trước khi ngắt kết nối
-  //       print("Đợi 10 giây trước khi ngắt kết nối...");
-  //       await Future.delayed(const Duration(seconds: 10));
-  //       await notifyCharacteristic.setNotifyValue(false);
-  //       print("Đã tắt thông báo từ characteristic.");
+  //       // Nhận dữ liệu phản hồi từ ESP32 sau khi gửi
+  //       // await receiveDataFromDevice(device);
   //     } else {
-  //       print("Không tìm thấy characteristic hỗ trợ notify.");
+  //       print("Không tìm thấy characteristic hỗ trợ ghi");
   //     }
   //   } catch (e) {
-  //     print("Lỗi khi nhận dữ liệu: $e");
-  //   } finally {
-  //     try {
-  //       //await device.disconnect();
-  //       print("Ngắt kết nối sau khi nhận dữ liệu từ ESP32.");
-  //     } catch (e) {
-  //       print("Lỗi khi ngắt kết nối: $e");
-  //     }
+  //     print("Lỗi khi gửi dữ liệu: $e");
   //   }
-  //   return null;
+  //
+  //   return "";
   // }
-  // Future<String?> receiveDataFromDevice(BluetoothDevice device) async {
-  //   try {
-  //     // Khám phá dịch vụ và đặc tính
-  //     List<BluetoothService> services = await device.discoverServices();
-  //     BluetoothCharacteristic? notifyCharacteristic;
-  //
-  //     // Tìm đặc tính hỗ trợ notify
-  //     for (var service in services) {
-  //       for (var characteristic in service.characteristics) {
-  //         if (characteristic.properties.notify) {
-  //           notifyCharacteristic = characteristic;
-  //           break;
-  //         }
-  //       }
-  //       if (notifyCharacteristic != null) break;
-  //     }
-  //
-  //     if (notifyCharacteristic != null) {
-  //       await notifyCharacteristic.setNotifyValue(true);
-  //       print("Đã bật thông báo từ characteristic.");
-  //
-  //       // Lắng nghe và nhận dữ liệu
-  //       List<int> receivedData = [];
-  //       bool receivedAllData = false;
-  //
-  //       await for (var data in notifyCharacteristic.lastValueStream) {
-  //         if (data.isNotEmpty) {
-  //           print("Dữ liệu thô nhận được: $data");
-  //
-  //           // Ghép nối dữ liệu vào danh sách
-  //           receivedData.addAll(data);
-  //
-  //           // Giả sử dữ liệu đầy đủ khi đã nhận được một lượng dữ liệu lớn (hoặc đủ theo yêu cầu)
-  //           if (receivedData.length > 100) { // Bạn có thể điều chỉnh điều kiện này
-  //             receivedAllData = true;
-  //             break; // Đủ dữ liệu, dừng nhận
-  //           }
-  //         }
-  //       }
-  //
-  //       // Kiểm tra xem đã nhận đủ dữ liệu chưa
-  //       if (receivedAllData) {
-  //         print("Dữ liệu đầy đủ đã nhận được.");
-  //
-  //         // Giải mã dữ liệu nhận được
-  //         String receivedString = utf8.decode(receivedData);
-  //         print("Dữ liệu chuỗi nhận được: $receivedString");
-  //
-  //         try {
-  //           Map<String, dynamic> jsonMap = jsonDecode(receivedString);
-  //           print("Dữ liệu JSON: $jsonMap");
-  //         } catch (e) {
-  //           print("Lỗi khi phân tích JSON: $e");
-  //         }
-  //       } else {
-  //         print("Dữ liệu không đầy đủ hoặc không nhận được.");
-  //       }
-  //
-  //       // Đợi thời gian chờ trước khi ngắt kết nối
-  //       await Future.delayed(const Duration(seconds: 10));
-  //       await notifyCharacteristic.setNotifyValue(false);
-  //       print("Đã tắt thông báo từ characteristic.");
-  //     } else {
-  //       print("Không tìm thấy characteristic hỗ trợ notify.");
-  //     }
-  //   } catch (e) {
-  //     print("Lỗi khi nhận dữ liệu: $e");
-  //   } finally {
-  //     try {
-  //       await device.disconnect();
-  //       print("Ngắt kết nối sau khi nhận dữ liệu từ ESP32.");
-  //     } catch (e) {
-  //       print("Lỗi khi ngắt kết nối: $e");
-  //     }
-  //   }
-  //   return null;
-  // }
-  Future<Map<String, dynamic>?> receiveDataFromDevice(BluetoothDevice device) async {
+
+  Future<String?> receiveDataFromDevice(BluetoothDevice device) async {
     try {
+      // Khám phá dịch vụ và đặc tính
       List<BluetoothService> services = await device.discoverServices();
       BluetoothCharacteristic? notifyCharacteristic;
 
+      // Tìm đặc tính hỗ trợ notify
       for (var service in services) {
         for (var characteristic in service.characteristics) {
           if (characteristic.properties.notify) {
@@ -325,51 +230,49 @@ class BleController extends GetxController{
         await notifyCharacteristic.setNotifyValue(true);
         print("Đã bật thông báo từ characteristic.");
 
-        Completer<Map<String, dynamic>?> completer = Completer<Map<String, dynamic>?>(); // Thay đổi kiểu Completer
+        // Lắng nghe và nhận dữ liệu
         List<int> receivedData = [];
-        late StreamSubscription? subscription;
+        bool receivedAllData = false;
 
-        subscription = notifyCharacteristic.lastValueStream.listen((data) {
+        await for (var data in notifyCharacteristic.lastValueStream) {
           if (data.isNotEmpty) {
+            print("Dữ liệu thô nhận được: $data");
+
+            // Ghép nối dữ liệu vào danh sách
             receivedData.addAll(data);
 
-            if (data.contains(10)) {
-              String receivedString = utf8.decode(receivedData);
-              print("Dữ liệu chuỗi nhận được: $receivedString");
-
-              if (receivedString.startsWith('{') || receivedString.startsWith('[')) {
-                try {
-                  Map<String, dynamic> jsonMap = jsonDecode(receivedString);
-                  print("Dữ liệu JSON: $jsonMap");
-                  completer.complete(jsonMap); // Giờ đây kiểu dữ liệu đã khớp
-                } catch (e) {
-                  print("Lỗi khi phân tích JSON: $e");
-                  completer.completeError("Lỗi JSON: $e");
-                }
-              } else {
-                print("Dữ liệu không phải JSON: $receivedString");
-                completer.complete(null);
-              }
-              subscription?.cancel();
-              return;
+            // Kiểm tra ký tự cuối (giả sử dụng \n là ký tự kết thúc dữ liệu)
+            String partialString = String.fromCharCodes(receivedData);
+            if (partialString.endsWith('}')) {
+              receivedAllData = true;
+              break;
             }
           }
-        }, onError: (error) {
-          print("Lỗi khi nhận dữ liệu từ Stream: $error");
-          completer.completeError("Lỗi Stream: $error");
-        });
+        }
 
-        Map<String, dynamic>? result = await completer.future.timeout(const Duration(seconds: 10), onTimeout: () {
-          print("Đã hết thời gian chờ nhận dữ liệu.");
-          subscription?.cancel();
-          return null;
-        });
+        // Kiểm tra xem đã nhận đủ dữ liệu chưa
+        if (receivedAllData) {
+          print("Dữ liệu đầy đủ đã nhận được.");
 
-        await Future.delayed(const Duration(seconds: 1));
+          // Giải mã dữ liệu nhận được
+          String receivedString = String.fromCharCodes(receivedData);
+          print("Dữ liệu chuỗi nhận được: $receivedString");
+
+          try {
+            Map<String, dynamic> jsonMap = jsonDecode(receivedString);
+            print("Dữ liệu JSON: $jsonMap");
+            return receivedString;
+          } catch (e) {
+            print("Lỗi khi phân tích JSON: $e");
+          }
+        } else {
+          print("Dữ liệu không đầy đủ hoặc không nhận được.");
+        }
+
+        // Đợi thời gian chờ trước khi ngắt kết nối
+        await Future.delayed(const Duration(seconds: 10));
         await notifyCharacteristic.setNotifyValue(false);
         print("Đã tắt thông báo từ characteristic.");
-
-        return result;
       } else {
         print("Không tìm thấy characteristic hỗ trợ notify.");
       }
@@ -377,16 +280,81 @@ class BleController extends GetxController{
       print("Lỗi khi nhận dữ liệu: $e");
     } finally {
       try {
-        BluetoothConnectionState state = await device.connectionState.firstWhere((s) => true).timeout(const Duration(seconds: 1));
-        if (state == BluetoothConnectionState.connected) {
-          await device.disconnect();
-          print("Ngắt kết nối sau khi nhận dữ liệu.");
-        }
+        await device.disconnect();
+        print("Ngắt kết nối sau khi nhận dữ liệu từ ESP32.");
       } catch (e) {
-        print("Lỗi khi kiểm tra trạng thái kết nối hoặc ngắt kết nối: $e");
+        print("Lỗi khi ngắt kết nối: $e");
       }
     }
     return null;
   }
+
+  // Future<Map<String, dynamic>?> receiveDataFromDevice(BluetoothDevice device) async {
+  //   try {
+  //     // Kiểm tra trạng thái kết nối trước khi đọc
+  //     BluetoothConnectionState connectionState = await device.connectionState.first;
+  //     if (connectionState != BluetoothConnectionState.connected) {
+  //       print("Thiết bị chưa kết nối. Đang kết nối lại...");
+  //       await device.connect();
+  //     }
+  //
+  //     print("Thiết bị đã kết nối, bắt đầu khám phá dịch vụ...");
+  //     List<BluetoothService> services = await device.discoverServices();
+  //     print("Khám phá dịch vụ hoàn tất: ${services.length} dịch vụ được tìm thấy.");
+  //
+  //     // Tìm characteristic hỗ trợ read
+  //     BluetoothCharacteristic? readCharacteristic;
+  //     for (var service in services) {
+  //       for (var characteristic in service.characteristics) {
+  //         print("Đang kiểm tra characteristic: ${characteristic.uuid}");
+  //         if (characteristic.properties.read) {
+  //           print("Tìm thấy characteristic hỗ trợ read: ${characteristic.uuid}");
+  //           readCharacteristic = characteristic;
+  //           break;
+  //         }
+  //       }
+  //       if (readCharacteristic != null) break;
+  //     }
+  //
+  //     if (readCharacteristic != null) {
+  //       // Đọc dữ liệu từ characteristic
+  //       List<int> value = await readCharacteristic.read();
+  //       print("Dữ liệu nhận được (raw bytes): $value");
+  //
+  //       // Chuyển đổi thành chuỗi
+  //       String receivedString = utf8.decode(value);
+  //       print("Dữ liệu nhận được (chuỗi): $receivedString");
+  //
+  //       // Phân tích JSON nếu dữ liệu hợp lệ
+  //       if (receivedString.startsWith('{') && receivedString.endsWith('}')) {
+  //         try {
+  //           Map<String, dynamic> jsonMap = jsonDecode(receivedString);
+  //           print("JSON nhận được: $jsonMap");
+  //           return jsonMap;
+  //         } catch (e) {
+  //           print("Lỗi khi phân tích JSON: $e");
+  //         }
+  //       } else {
+  //         print("Dữ liệu không phải JSON hợp lệ: $receivedString");
+  //       }
+  //     } else {
+  //       print("Không tìm thấy characteristic hỗ trợ read.");
+  //     }
+  //   } catch (e) {
+  //     print("Lỗi khi nhận dữ liệu: $e");
+  //   } finally {
+  //     try {
+  //       BluetoothConnectionState state = await device.connectionState.first;
+  //       if (state == BluetoothConnectionState.connected) {
+  //         await device.disconnect();
+  //         print("Ngắt kết nối sau khi nhận dữ liệu.");
+  //       }
+  //     } catch (e) {
+  //       print("Lỗi khi kiểm tra trạng thái kết nối: $e");
+  //     }
+  //   }
+  //   return null;
+  // }
+
   Stream<List<ScanResult>> get scanResults => FlutterBluePlus.scanResults;
 }

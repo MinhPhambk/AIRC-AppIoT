@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "761642290471",
+    "project_id": "fluttertest-b75f0",
+    "storage_bucket": "fluttertest-b75f0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:761642290471:android:2440073283947aae862d02",
+        "android_client_info": {
+          "package_name": "com.example.VOSmart"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCCsdmMOzknqyMIx6-8Q6SXAKg4AkmfCxs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:761642290471:android:68eda26cf69b7c42862d02",
+        "android_client_info": {
+          "package_name": "com.example.firebase_test"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCCsdmMOzknqyMIx6-8Q6SXAKg4AkmfCxs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

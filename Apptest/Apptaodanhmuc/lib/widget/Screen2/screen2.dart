@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:apptaodanhmuc/Component/item.dart';
 import 'package:flutter/material.dart';
-import 'ServiceMQTT.dart';
+import '../../Controller/MQTT/ServiceMQTT.dart';
 
 class DeviceScreen extends StatefulWidget {
   const DeviceScreen({super.key, required this.device, required this.quantity});
