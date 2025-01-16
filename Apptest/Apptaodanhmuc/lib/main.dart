@@ -1,10 +1,10 @@
+import 'package:apptaodanhmuc/Controller/Cloud_MongoDB/MongoDB_service.dart';
 import 'package:apptaodanhmuc/widget/Screen1/screen1.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 void main()async{
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();  // Khởi tạo Firebase
+  await MongoDBService.init();
   runApp(const MyApp());
 }
 

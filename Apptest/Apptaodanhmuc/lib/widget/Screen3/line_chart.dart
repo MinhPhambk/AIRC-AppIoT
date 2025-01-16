@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../Component/sensor_chart.dart';
-import '../../Controller/Cloud_Firestore/firebase_service.dart';
+import '../../Controller/Cloud_MongoDB/MongoDB_service.dart';
+import '../../Controller/Cloud_MongoDB/sensor_data.dart';
 
 class LineChart extends StatefulWidget {
   const LineChart({super.key, required this.deviceName});
@@ -11,7 +12,24 @@ class LineChart extends StatefulWidget {
 }
 
 class _LineChartState extends State<LineChart> {
-  final FirebaseService _firebaseService = FirebaseService();
+  final MongoDBService _mongoDBService = MongoDBService();
+  List<SensorData> _sensorData = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeStream();
+  }
+
+  void _initializeStream() {
+    _mongoDBService.getDynamicSensorData().listen((data) {
+      setState(() {
+        _sensorData = data;
+        _isLoading = false;
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,72 +41,45 @@ class _LineChartState extends State<LineChart> {
           style: TextStyle(fontSize: 25, fontWeight: FontWeight.w700, color: Colors.white),
         ),
       ),
-      body: SingleChildScrollView(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _sensorData.isEmpty
+          ? const Center(child: Text('No data available'))
+          : SingleChildScrollView(
         child: Column(
           children: [
-            StreamBuilder<List<SensorData>>(
-              stream: _firebaseService.getSensorDataStream('homeData'),
-              builder: (context, homeSnapshot) {
-                return StreamBuilder<List<SensorData>>(
-                  stream: _firebaseService.getSensorDataStream('outdoorData'),
-                  builder: (context, outdoorSnapshot) {
-                    if (homeSnapshot.connectionState == ConnectionState.waiting ||
-                        outdoorSnapshot.connectionState == ConnectionState.waiting) {
-                      return const CircularProgressIndicator();
-                    }
-                    if (homeSnapshot.hasError || outdoorSnapshot.hasError) {
-                      return Text('Error: ${homeSnapshot.error ?? outdoorSnapshot.error}');
-                    }
-                    if (!homeSnapshot.hasData || !outdoorSnapshot.hasData) {
-                      return const Text('No data available');
-                    }
-
-                    final homeData = homeSnapshot.data!;
-                    final outdoorData = outdoorSnapshot.data!;
-
-                    return Column(
-                      children: [
-                        buildChartContainer(
-                          SensorChart(
-                            sensorName: 'Temperature Sensor',
-                            homeData: homeData,
-                            outdoorData: outdoorData,
-                            yValueMapperHome: (SensorData data, _) => data.temperature,
-                            yValueMapperOutdoor: (SensorData data, _) => data.temperature,
-                            unit: '°C',
-                            yMin: 10,
-                            yMax: 100,
-                          ),
-                        ),
-                        buildChartContainer(
-                          SensorChart(
-                            sensorName: 'Humidity Sensor',
-                            homeData: homeData,
-                            outdoorData: outdoorData,
-                            yValueMapperHome: (SensorData data, _) => data.humidity,
-                            yValueMapperOutdoor: (SensorData data, _) => data.humidity,
-                            unit: '%',
-                            yMin: 10,
-                            yMax: 100,
-                          ),
-                        ),
-                        buildChartContainer(
-                          SensorChart(
-                            sensorName: 'Pressure Sensor',
-                            homeData: homeData,
-                            outdoorData: outdoorData,
-                            yValueMapperHome: (SensorData data, _) => data.pressure,
-                            yValueMapperOutdoor: (SensorData data, _) => data.pressure,
-                            unit: 'hPa',
-                            yMin: 1000,
-                            yMax: 1200,
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
+            buildChartContainer(
+              SensorChart(
+                sensorName: 'Temperature Sensor',
+                sensorData: _sensorData,
+                yValueMapper: (SensorData data, _) => data.temp,
+                unit: '°C',
+                // yMin: 10,
+                // yMax: 30,
+                lineColor: Colors.redAccent,
+              ),
+            ),
+            buildChartContainer(
+              SensorChart(
+                sensorName: 'Humidity Sensor',
+                sensorData: _sensorData,
+                yValueMapper: (SensorData data, _) => data.humi,
+                unit: '%',
+                // yMin: 10,
+                // yMax: 100,
+                lineColor: Colors.blueAccent,
+              ),
+            ),
+            buildChartContainer(
+              SensorChart(
+                sensorName: 'Lux Sensor',
+                sensorData: _sensorData,
+                yValueMapper: (SensorData data, _) => data.lux,
+                unit: 'Lx',
+                // yMin: 100,
+                // yMax: 500,
+                lineColor: Colors.lime[500],
+              ),
             ),
           ],
         ),
@@ -99,7 +90,7 @@ class _LineChartState extends State<LineChart> {
   Widget buildChartContainer(Widget child) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-      padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
